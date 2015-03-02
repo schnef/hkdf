@@ -168,8 +168,6 @@ case_7_test() ->
     ?assert(PRK =:= extract(Hash, IKM) andalso
 	    OKM =:= expand(Hash, PRK, Info, L)).
 
--endif.
-
 int(C) when $0 =< C, C =< $9 ->
     C - $0;
 int(C) when $A =< C, C =< $F ->
@@ -184,4 +182,7 @@ hexstr_to_list([]) ->
 
 hexstr_to_bin(S) ->
     list_to_binary(hexstr_to_list(S)).
+
+
+-endif.
 
