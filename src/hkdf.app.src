@@ -1,12 +1,13 @@
 {application, hkdf,
  [
-  {description, ""},
+  {description, "HMAC-based Key Derivation Function"},
   {vsn, "1"},
   {registered, []},
   {applications, [
                   kernel,
-                  stdlib
+                  stdlib,
+                  crypto
                  ]},
-  {mod, { hkdf_app, []}},
+  {modules, []},
   {env, []}
  ]}.
