@@ -29,4 +29,5 @@ OKM = expand(Hash, PRK, Info, L)
 ## Further reading
 
 - [Understanding HKDF](https://soatok.blog/2021/11/17/understanding-hkdf/)
-- 
+- [RFC 5869 - HMAC-based Extract-and-Expand Key Derivation Function (HKDF)
+](https://datatracker.ietf.org/doc/html/rfc5869)
