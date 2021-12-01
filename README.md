@@ -25,3 +25,8 @@ Next, expand the PKR to the required length
 ```
 OKM = expand(Hash, PRK, Info, L)
 ```
+
+## Further reading
+
+- [Understanding HKDF](https://soatok.blog/2021/11/17/understanding-hkdf/)
+- 
