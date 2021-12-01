@@ -1,57 +1,97 @@
 -module(hkdf).
 
--export([extract/2, extract/3, expand/3, expand/4,
-	 derive_secrets/2, derive_secrets/3, derive_secrets/4, derive_secrets/5]).
+-export([derive_secrets/2, derive_secrets/3, derive_secrets/4, derive_secrets/5,
+	 extract/2, extract/3, expand/3, expand/4]).
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 -endif.
 
 -type hash_algorithms() :: md5 | sha | sha224 | sha256 | sha384 | sha512.
+-type salt() :: iodata().
+-type info() :: iodata().
+-type prk() :: binary().
+-type ikm() :: iodata().
+-type okm() :: binary().
 
-hash_length(md5) -> 128;
-hash_length(sha) -> 128;
-hash_length(sha224) -> 224;
-hash_length(sha256) -> 256;
-hash_length(sha384) -> 384;
-hash_length(sha512) -> 512.
+-spec derive_secrets(IKM, L) -> OKM when
+      IKM :: ikm(), 
+      L :: pos_integer(), 
+      OKM :: okm().
+%% @doc Generate a HKDF key derivation of a supplied key IKM with a
+%% desired output length L in bytes, using the sha256 hmac function as
+%% a default.
+derive_secrets(IKM, L) ->
+    derive_secrets(sha256, IKM, <<>>, <<>>, L).
 
-%% length of output keying material in octets should be <= 255 *
-%% HashLen (See page 3)
-max_length(Hash_algorithm) ->
-    (hash_length(Hash_algorithm) bsr 3) * 255.
+-spec derive_secrets(Hash_algorithm, IKM, L) -> OKM when
+      Hash_algorithm :: hash_algorithms(), 
+      IKM :: ikm(), 
+      L :: pos_integer(),
+      OKM :: okm().
+%% @doc Generate a HKDF key derivation of a supplied key IKM with a
+%% desired output length L in bytes, using Hash_algorithm.
+derive_secrets(Hash_algorithm, IKM, L) when is_integer(L) ->
+    derive_secrets(Hash_algorithm, IKM, <<>>, <<>>, L).
 
--spec extract(Hash_algorithm :: hash_algorithms(), 
-	      IKM :: iodata()) 
-	     -> PRK :: iodata(). 
+-spec derive_secrets(Hash_algorithm, IKM, Info, L) -> OKM when
+      Hash_algorithm :: hash_algorithms(), 
+      IKM :: ikm(), 
+      Info :: info(), 
+      L :: pos_integer(),
+      OKM :: okm().
+derive_secrets(Hash_algorithm, IKM, Info, L) ->
+    derive_secrets(Hash_algorithm, IKM, Info, <<>>, L).
+
+-spec derive_secrets(Hash_algorithm, IKM, Info, Salt, L) -> OKM when
+      Hash_algorithm :: hash_algorithms(), 
+      IKM :: ikm(), 
+      Info :: info(), 
+      Salt :: salt(),
+      L :: pos_integer(),
+      OKM :: okm().
+%% @doc Generate a HKDF key derivation of a supplied key IKM and salt with a
+%% desired output length L in bytes, using Hash_algorithm.
+derive_secrets(Hash_algorithm, IKM, Info, Salt, L) ->
+    PRK = extract(Hash_algorithm, Salt, IKM),
+    expand(Hash_algorithm, PRK, Info, L).
+
+-spec extract(Hash_algorithm, IKM) -> PRK when
+      Hash_algorithm :: hash_algorithms(),
+      IKM :: ikm(),
+      PRK :: prk(). 
+%% @doc extract/2 takes the input keying material IKM and "extracts" from it
+%% a fixed-length pseudo random key PRK.
 extract(Hash_algorithm, IKM) ->
-    extract(Hash_algorithm, 
-	    <<0:(hash_length(Hash_algorithm))>>, 
-	    IKM).
+    extract(Hash_algorithm, <<>>, IKM).
 
--spec extract(Hash_algorithm :: hash_algorithms(), 
-	      Salt :: iodata(), 
-	      IKM :: iodata()) 
-	     -> PRK :: binary(). 
-extract(Hash_algorithm, <<"">>, IKM) -> 
-    crypto:hmac(Hash_algorithm, 
-		<<0:(hash_length(Hash_algorithm))>>, 
-		IKM);
+-spec extract(Hash_algorithm, Salt, IKM) -> PRK when
+      Hash_algorithm :: hash_algorithms(),
+      Salt :: salt(),
+      IKM :: ikm(),
+      PRK :: prk(). 
+%% @doc extract/3 takes the input keying material IKM plus a salt and "extracts" from it
+%% a fixed-length pseudo random key PRK.
+extract(Hash_algorithm, <<>>, IKM) -> 
+    hmac(Hash_algorithm, <<0:(hash_length(Hash_algorithm))>>, IKM);
 extract(Hash_algorithm, Salt, IKM) -> 
-    crypto:hmac(Hash_algorithm, Salt, IKM).
+    hmac(Hash_algorithm, Salt, IKM).
 
--spec expand(Hash_algorithm :: hash_algorithms(), 
-	     PRK :: iodata(), 
-	     L :: integer()) 
-	    -> OKM :: binary().
+-spec expand(Hash_algorithm, PRK, L) -> OKM when
+      Hash_algorithm :: hash_algorithms(), 
+      PRK :: prk(), 
+      L :: pos_integer(), 
+      OKM :: okm().
+% @doc expand/3 "expands" the key PRK from the extract stage into L additional pseudorandom keys.
 expand(Hash_algorithm, PRK, L) ->
     expand(Hash_algorithm, PRK, <<>>, L).
 
--spec expand(Hash_algorithm :: hash_algorithms(), 
-	     PRK :: iodata(), 
-	     Info :: iodata(), 
-	     L :: integer()) 
-	    -> OKM :: binary().
+-spec expand(Hash_algorithm, PRK, Info, L) -> OKM when
+      Hash_algorithm :: hash_algorithms(), 
+      PRK :: prk(), 
+      Info :: info(), 
+      L :: pos_integer(),
+      OKM :: okm().
 expand(Hash_algorithm, PRK, "", L) ->
     expand(Hash_algorithm, PRK, <<>>, L);
 expand(Hash_algorithm, PRK, Info, L) when is_integer(L) ->
@@ -73,53 +113,34 @@ expand_(_Hash_algorithm, _PRK, _Info, I, N, _Prev, Acc)
   when I > N ->
     Acc;
 expand_(Hash_algorithm, PRK, Info, I, N, Prev, Acc) ->
-    Ti = crypto:hmac(Hash_algorithm, 
-		     PRK, 
-		     <<Prev/binary, Info/binary, I:8>>),
-    expand_(Hash_algorithm, PRK, Info, I + 1, N, Ti, 
-	    <<Acc/binary, Ti/binary>>).
+    Ti = hmac(Hash_algorithm, PRK, <<Prev/binary, Info/binary, I:8>>),
+    expand_(Hash_algorithm, PRK, Info, I + 1, N, Ti, <<Acc/binary, Ti/binary>>).
 
+%% length of output keying material in octets should be <= 255 *
+%% HashLen (See page 3)
+max_length(Hash_algorithm) ->
+    (hash_length(Hash_algorithm) bsr 3) * 255.
+
+%% This is the N = ceil(L/HashLen) calculation
 calc_iters(L, Hash_algorithm) ->
     Hl = hash_length(Hash_algorithm) bsr 3,
-    T = L div Hl,
+    N = L div Hl,
     case (L rem Hl) of
 	0 ->
-	    T;
+	    N;
 	_ ->
-	    T + 1
+	    N + 1
     end.
 
--spec derive_secrets(IKM :: iodata(), 
-		     L :: integer()) 
-		    -> OKM :: binary().
-derive_secrets(IKM, L) ->
-    derive_secrets(sha256, IKM, <<>>, <<>>, L).
+hash_length(md5) -> 128;
+hash_length(sha) -> 128;
+hash_length(sha224) -> 224;
+hash_length(sha256) -> 256;
+hash_length(sha384) -> 384;
+hash_length(sha512) -> 512.
 
--spec derive_secrets(Hash_algorithm :: hash_algorithms(), 
-		     IKM :: iodata(), 
-		     L :: integer()) 
-		    -> OKM :: binary().
-derive_secrets(Hash_algorithm, IKM, L) ->
-    derive_secrets(Hash_algorithm, IKM, <<>>, <<>>, L).
-
--spec derive_secrets(Hash_algorithm :: hash_algorithms(), 
-		     IKM :: iodata(), 
-		     Info :: iodata(), 
-		     L :: integer()) 
-		    -> OKM :: binary().
-derive_secrets(Hash_algorithm, IKM, Info, L) ->
-    derive_secrets(Hash_algorithm, IKM, Info, <<>>, L).
-
--spec derive_secrets(Hash_algorithm :: hash_algorithms(), 
-		     IKM :: iodata(), 
-		     Info :: iodata(), 
-		     Salt :: iodata(),
-		     L :: integer()) 
-		    -> OKM :: binary().
-derive_secrets(Hash_algorithm, IKM, Info, Salt, L) ->
-    PRK = extract(Hash_algorithm, Salt, IKM),
-    expand(Hash_algorithm, PRK, Info, L).
-
+hmac(Hash_algorithm, Salt, IKM) ->
+    crypto:mac(hmac, Hash_algorithm, Salt, IKM).
 
 -ifdef(TEST).
 

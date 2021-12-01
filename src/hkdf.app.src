@@ -1,7 +1,7 @@
 {application, hkdf,
  [
   {description, "HMAC-based Key Derivation Function"},
-  {vsn, "1"},
+  {vsn, "1.0.0"},
   {registered, []},
   {applications, [
                   kernel,

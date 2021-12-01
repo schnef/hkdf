@@ -5,6 +5,8 @@ is a very straigth forward implementation, including the tests from
 RFC5869 as eunit tests. It supports the hash functions md5, sha,
 sha224, sha256, sha384, sha512.
 
+Updated to Erlang/OTP 24 and rebar3.
+
 ## Usage
 
 - Hash = md5 | sha | sha224 | sha256 | sha384 | sha512.
