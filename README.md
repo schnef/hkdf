@@ -37,7 +37,7 @@ The maximum derived key length depends on the hash algorithm used:
 | md5 | 4080 |
 | sha | 4080 |
 | sha224 | 7140 |
-| sha256 | 7905 |
+| sha256 | 8160 |
 | sha384 | 12240 |
 | sha512 | 16320 |
 
@@ -50,7 +50,7 @@ Now use some other hash algorithm:
   163,245,17,144,234,186,78,169,12,1,140,191,236,27,...>>
 ```
 Now, with some info added. Info is used to set a context such as
-`encryption`, `message authentication`, `WhisperMessageKeys` or whatever you like. See [Understanding HKDF](https://soatok.blog/2021/11/17/understanding-hkdf/) for more details:
+`encryption`, `message authentication`, `WhisperMessageKeys` or whatever you like.
 ```
 4> hkdf:derive_secrets(sha512, <<"some sercret">>, <<"encryption">>, 2048).
 <<81,235,47,134,224,128,85,22,18,245,67,75,151,30,104,103,
@@ -59,16 +59,25 @@ Now, with some info added. Info is used to set a context such as
 <<97,51,54,191,163,55,231,156,65,248,186,24,46,201,234,
   178,98,121,37,55,93,243,214,27,136,7,181,120,52,...>>
 ```
-Add some salt (NB: do read [Understanding HKDF](https://soatok.blog/2021/11/17/understanding-hkdf/) on why and when to use salt! If the IKM is not random and/or has some structure as it has when taken from [Elliptic Curve] Diffie-Hellman for example, you must either hash the IKM yourself before using it or add some salt.):
+Add some salt:
 ```
 6> hkdf:derive_secrets(sha512, <<"some sercret">>, <<"MyApplication">>, <<"lots of salt here">>, 2048).
 <<86,124,101,141,121,180,89,23,115,176,45,80,60,10,88,157,
   32,249,52,19,231,142,32,74,103,55,161,243,207,...>>
 ```
-Input key material, info and salt all are binaries, that is a number of bytes.
+Input key material, info and salt all are binaries, i.e. a number of bytes.
+
+NB: do read [Understanding
+HKDF](https://soatok.blog/2021/11/17/understanding-hkdf/) on the
+proper use of the `Info` argument and why and when to use salt. If the
+IKM is not random and/or has some structure as it has when taken from
+[Elliptic Curve] Diffie-Hellman for example, you must either hash the
+
+IKM yourself before using it or add some salt.
 
 You can also directly call the underlying functions `extract/2-3` and
-`expand/3-5`, which is done in the tests to verify the intermediate results.
+`expand/3-5`, which is done in the tests to verify the intermediate
+results.
 
 ```
 PKR = hkdf:extract(Hash, IKM).
@@ -100,6 +109,7 @@ Finished in 0.150 seconds
 
 ## Further reading
 
-- [Understanding HKDF](https://soatok.blog/2021/11/17/understanding-hkdf/)
+- [Understanding
+  HKDF](https://soatok.blog/2021/11/17/understanding-hkdf/)
 - [RFC 5869 - HMAC-based Extract-and-Expand Key Derivation Function (HKDF)
 ](https://datatracker.ietf.org/doc/html/rfc5869)

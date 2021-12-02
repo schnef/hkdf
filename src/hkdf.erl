@@ -1,13 +1,13 @@
 -module(hkdf).
 
 -export([derive_secrets/2, derive_secrets/3, derive_secrets/4, derive_secrets/5,
-	 extract/2, extract/3, expand/3, expand/4]).
+	 extract/2, extract/3, expand/3, expand/4, max_length/1]).
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 -endif.
 
--type hash_algorithms() :: md5 | sha | sha224 | sha256 | sha384 | sha512.
+-type hash_algorithm() :: md5 | sha | sha224 | sha256 | sha384 | sha512.
 -type salt() :: iodata().
 -type info() :: iodata().
 -type prk() :: binary().
@@ -25,7 +25,7 @@ derive_secrets(IKM, L) ->
     derive_secrets(sha256, IKM, <<>>, <<>>, L).
 
 -spec derive_secrets(Hash_algorithm, IKM, L) -> OKM when
-      Hash_algorithm :: hash_algorithms(), 
+      Hash_algorithm :: hash_algorithm(), 
       IKM :: ikm(), 
       L :: pos_integer(),
       OKM :: okm().
@@ -35,7 +35,7 @@ derive_secrets(Hash_algorithm, IKM, L) when is_integer(L) ->
     derive_secrets(Hash_algorithm, IKM, <<>>, <<>>, L).
 
 -spec derive_secrets(Hash_algorithm, IKM, Info, L) -> OKM when
-      Hash_algorithm :: hash_algorithms(), 
+      Hash_algorithm :: hash_algorithm(), 
       IKM :: ikm(), 
       Info :: info(), 
       L :: pos_integer(),
@@ -44,7 +44,7 @@ derive_secrets(Hash_algorithm, IKM, Info, L) ->
     derive_secrets(Hash_algorithm, IKM, Info, <<>>, L).
 
 -spec derive_secrets(Hash_algorithm, IKM, Info, Salt, L) -> OKM when
-      Hash_algorithm :: hash_algorithms(), 
+      Hash_algorithm :: hash_algorithm(), 
       IKM :: ikm(), 
       Info :: info(), 
       Salt :: salt(),
@@ -57,7 +57,7 @@ derive_secrets(Hash_algorithm, IKM, Info, Salt, L) ->
     expand(Hash_algorithm, PRK, Info, L).
 
 -spec extract(Hash_algorithm, IKM) -> PRK when
-      Hash_algorithm :: hash_algorithms(),
+      Hash_algorithm :: hash_algorithm(),
       IKM :: ikm(),
       PRK :: prk(). 
 %% @doc extract/2 takes the input keying material IKM and "extracts" from it
@@ -66,7 +66,7 @@ extract(Hash_algorithm, IKM) ->
     extract(Hash_algorithm, <<>>, IKM).
 
 -spec extract(Hash_algorithm, Salt, IKM) -> PRK when
-      Hash_algorithm :: hash_algorithms(),
+      Hash_algorithm :: hash_algorithm(),
       Salt :: salt(),
       IKM :: ikm(),
       PRK :: prk(). 
@@ -78,7 +78,7 @@ extract(Hash_algorithm, Salt, IKM) ->
     hmac(Hash_algorithm, Salt, IKM).
 
 -spec expand(Hash_algorithm, PRK, L) -> OKM when
-      Hash_algorithm :: hash_algorithms(), 
+      Hash_algorithm :: hash_algorithm(), 
       PRK :: prk(), 
       L :: pos_integer(), 
       OKM :: okm().
@@ -87,7 +87,7 @@ expand(Hash_algorithm, PRK, L) ->
     expand(Hash_algorithm, PRK, <<>>, L).
 
 -spec expand(Hash_algorithm, PRK, Info, L) -> OKM when
-      Hash_algorithm :: hash_algorithms(), 
+      Hash_algorithm :: hash_algorithm(), 
       PRK :: prk(), 
       Info :: info(), 
       L :: pos_integer(),
@@ -116,6 +116,7 @@ expand_(Hash_algorithm, PRK, Info, I, N, Prev, Acc) ->
     Ti = hmac(Hash_algorithm, PRK, <<Prev/binary, Info/binary, I:8>>),
     expand_(Hash_algorithm, PRK, Info, I + 1, N, Ti, <<Acc/binary, Ti/binary>>).
 
+-spec max_length(hash_algorithm()) -> pos_integer().
 %% length of output keying material in octets should be <= 255 *
 %% HashLen (See page 3)
 max_length(Hash_algorithm) ->
