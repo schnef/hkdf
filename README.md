@@ -72,7 +72,6 @@ HKDF](https://soatok.blog/2021/11/17/understanding-hkdf/) on the
 proper use of the `Info` argument and why and when to use salt. If the
 IKM is not random and/or has some structure as it has when taken from
 [Elliptic Curve] Diffie-Hellman for example, you must either hash the
-
 IKM yourself before using it or add some salt.
 
 You can also directly call the underlying functions `extract/2-3` and
